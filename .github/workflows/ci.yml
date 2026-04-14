@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      APP_HOST: 127.0.0.1
+      APP_PORT: "18080"
+      DB_PATH: /tmp/hackaton-ci.db
+      PREPARE_SLEEP_SECONDS: "1"
+      RPC_HOST: 127.0.0.1
+      RPC_PORT: "18080"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: poetry
+          cache-dependency-path: poetry.lock
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Ruff
+        run: poetry run ruff check .
+      - name: Pytest
+        run: |
+          mkdir -p artifacts
+          poetry run pytest --junitxml=artifacts/pytest.xml --cov-report=xml:artifacts/coverage.xml
+      - name: Start service
+        run: |
+          poetry run python -m hackaton.service.main > artifacts/service.log 2>&1 &
+          echo $! > artifacts/service.pid
+      - name: RPC smoke (service startup + predict)
+        run: poetry run python scripts/ci_rpc_smoke.py
+      - name: Stop service
+        if: always()
+        run: |
+          if [ -f artifacts/service.pid ]; then
+            kill $(cat artifacts/service.pid) || true
+          fi
+      - name: Upload CI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts
+          path: |
+            artifacts/pytest.xml
+            artifacts/coverage.xml
+            artifacts/service.log

@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "hackaton"
+version = "0.1.0"
+description = "Hackathon baseline service and tooling"
+authors = ["Hackathon Team <team@example.com>"]
+readme = "README.md"
+packages = [{ include = "hackaton" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.11.7"
+aiosqlite = "^0.21.0"
+prometheus-client = "^0.23.1"
+click = "^8.3.0"
+zeroapi = { git = "https://github.com/ananto30/zero.git", tag = "v1.0.1", extras = ["pydantic"] }
+pandas = "^3.0.2"
+numpy = "^2.4.4"
+trino = "^0.337.0"
+scikit-learn = "^1.8.0"
+shap = "^0.51.0"
+matplotlib = "^3.10.8"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
+pytest-asyncio = "^1.2.0"
+pytest-cov = "^7.0.0"
+ruff = "^0.13.0"
+pre-commit = "^4.3.0"
+ipykernel = "^7.2.0"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+  "--cov=hackaton.eval.cli",
+  "--cov=hackaton.eval.metric",
+  "--cov=hackaton.service.app",
+  "--cov=hackaton.service.prepare_manager",
+  "--cov-report=term-missing",
+  "--cov-fail-under=80",
+]
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

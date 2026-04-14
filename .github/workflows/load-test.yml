@@ -1,0 +1,67 @@
+name: load-test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  run-load-test:
+    runs-on: ubuntu-latest
+    env:
+      APP_HOST: 127.0.0.1
+      APP_PORT: "18080"
+      DB_PATH: /tmp/hackaton-load-test.db
+      PREPARE_SLEEP_SECONDS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: poetry
+          cache-dependency-path: poetry.lock
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Start service
+        run: |
+          mkdir -p artifacts/load_test
+          poetry run python -m hackaton.service.main &
+          echo $! > artifacts/load_test/service.pid
+          sleep 3
+      - name: Run load test
+        run: |
+          poetry run python scripts/load_test.py \
+            --host 127.0.0.1 \
+            --port 18080 \
+            --requests 100 \
+            --max-rpm 200 \
+            --report-path artifacts/load_test/load_test_report.md
+      - name: Validate load-test budget
+        run: |
+          poetry run python - <<'PY'
+          import re
+          from pathlib import Path
+
+          report = Path("artifacts/load_test/load_test_report.md").read_text(encoding="utf-8")
+          p95 = float(re.search(r"p95_ms:\s*([0-9.]+)", report).group(1))
+          failed_calls = int(re.search(r"failed_calls:\s*([0-9]+)", report).group(1))
+          if failed_calls > 0:
+              raise SystemExit(f"failed_calls must be 0, got {failed_calls}")
+          if p95 > 1000.0:
+              raise SystemExit(f"p95_ms must be <= 1000, got {p95}")
+          print(f"Load-test budget OK: p95_ms={p95}, failed_calls={failed_calls}")
+          PY
+      - name: Stop service
+        if: always()
+        run: |
+          if [ -f artifacts/load_test/service.pid ]; then
+            kill $(cat artifacts/load_test/service.pid) || true
+          fi
+      - name: Upload load-test artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-report
+          path: artifacts/load_test/load_test_report.md
