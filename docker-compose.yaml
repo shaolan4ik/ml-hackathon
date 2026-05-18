@@ -5,7 +5,14 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env.example
+    volumes:
+      - ./data:/app/data
     ports:
       - "${APP_PORT:-8000}:${APP_PORT:-8000}"
     restart: unless-stopped
     command: python -m hackaton.service.main
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
