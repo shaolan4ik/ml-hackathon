@@ -19,6 +19,9 @@ trino = "^0.337.0"
 scikit-learn = "^1.8.0"
 shap = "^0.51.0"
 matplotlib = "^3.10.8"
+lightgbm = "^4.6.0"
+xgboost = "^3.2.0"
+catboost = "^1.2.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
